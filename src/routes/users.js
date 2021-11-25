@@ -76,11 +76,19 @@ router.put("/update/password", checkAuth, async (req, res) => {
             if (err) {
               res.status(401).json({ message: " Unauthorized " });
             } else if (result) {
-              await User.update(
-                { password: newPassword },
-                { where: { id: data } }
-              );
-              res.status(200).json({ message: user });
+              bcrypt.hash(password, 10, async (err, hash) => {
+                if (err) {
+                  return res.status(500).json({
+                    error: err,
+                  });
+                } else {
+                  await User.update(
+                    { password: { newPassword: hash } },
+                    { where: { id: data } }
+                  );
+                  res.status(200).json({ message: user });
+                }
+              });
             } else {
               res.status(400).json({ error: "User or Password are incorrect" });
             }
@@ -136,13 +144,16 @@ router.post("/register", async (req, res) => {
       });
     }
   } catch (err) {
-    res.status(500).json({ message: "you have empty fields or error was produce" });
+    res
+      .status(500)
+      .json({ message: "you have empty fields or error was produce" });
   }
 });
 
-router.delete("/delete/:id`", checkAdmin, checkAuth, async (req, res) => {
+router.delete("/delete/:id", async (req, res) => {
+  const data = req.params.id;
+  console.log(data);
   try {
-    const data = req.params.id;
     const removedUser = await User.destroy({ where: { id: data } });
     if (!removedUser) {
       return res.status(404).json({ message: "User not found" });
